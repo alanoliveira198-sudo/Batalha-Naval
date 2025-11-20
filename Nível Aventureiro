@@ -1,0 +1,189 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+
+#define TAMANHO_TABULEIRO 10
+#define TAMANHO_NAVIO 3
+#define AGUA 0
+#define NAVIO 3
+#define NUM_NAVIOS_REQUERIDOS 4
+
+int tabuleiro[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO];
+
+typedef struct {
+    int linha_inicial;
+    int coluna_inicial;
+    char orientacao;
+} Navio;
+
+void inicializar_tabuleiro() {
+    int i;
+    int j;
+    
+    for (i = 0; i < TAMANHO_TABULEIRO; i++) {
+        for (j = 0; j < TAMANHO_TABULEIRO; j++) {
+            tabuleiro[i][j] = AGUA;
+        }
+    }
+}
+
+bool posicionar_navio(Navio navio) {
+    int i;
+    int r = navio.linha_inicial;
+    int c = navio.coluna_inicial;
+    char orientacao = navio.orientacao;
+    
+    for (i = 0; i < TAMANHO_NAVIO; i++) {
+        int linha_atual = r;
+        int coluna_atual = c;
+
+        if (orientacao == 'H') {
+            coluna_atual = c + i;
+        } else if (orientacao == 'V') {
+            linha_atual = r + i;
+        } else if (orientacao == 'D1') {
+            linha_atual = r + i;
+            coluna_atual = c + i;
+        } else if (orientacao == 'D2') {
+            linha_atual = r + i;
+            coluna_atual = c - i;
+        } else {
+            return false;
+        }
+
+        if (linha_atual < 0 || linha_atual >= TAMANHO_TABULEIRO ||
+            coluna_atual < 0 || coluna_atual >= TAMANHO_TABULEIRO) {
+            printf("\nERRO DE POSICAO: O navio (tamanho %d) sai dos limites do tabuleiro (10x10).\n", TAMANHO_NAVIO);
+            return false;
+        }
+
+        if (tabuleiro[linha_atual][coluna_atual] == NAVIO) {
+            printf("\nERRO DE POSICAO: Sobreposicao. Esta posicao (%d, %d) ja esta ocupada por outro navio.\n", linha_atual, coluna_atual);
+            return false;
+        }
+    }
+
+    for (i = 0; i < TAMANHO_NAVIO; i++) {
+        int linha_atual = r;
+        int coluna_atual = c;
+
+        if (orientacao == 'H') {
+            coluna_atual = c + i;
+        } else if (orientacao == 'V') {
+            linha_atual = r + i;
+        } else if (orientacao == 'D1') {
+            linha_atual = r + i;
+            coluna_atual = c + i;
+        } else if (orientacao == 'D2') {
+            linha_atual = r + i;
+            coluna_atual = c - i;
+        }
+
+        tabuleiro[linha_atual][coluna_atual] = NAVIO;
+    }
+
+    return true;
+}
+
+void exibir_tabuleiro() {
+    int i;
+    int j;
+
+    printf("\n\n------------------------------------------------------\n");
+    printf("MAPA DO TABULEIRO DE BATALHA NAVAL (0 = Agua, 3 = Navio)\n");
+    printf("------------------------------------------------------\n");
+    printf("     0   1   2   3   4   5   6   7   8   9  \n");
+    printf("   -----------------------------------------\n");
+
+    for (i = 0; i < TAMANHO_TABULEIRO; i++) {
+        printf("%d  |", i);
+        for (j = 0; j < TAMANHO_TABULEIRO; j++) {
+            printf(" %d |", tabuleiro[i][j]); 
+        }
+        printf("\n");
+        printf("   -----------------------------------------\n");
+    }
+}
+
+int main() {
+    inicializar_tabuleiro();
+    
+    printf("CONFIGURACAO INICIAL DA BATALHA NAVAL\n");
+    printf("------------------------------------------------------\n");
+    printf("Voce deve posicionar %d navios de tamanho %d.\n", NUM_NAVIOS_REQUERIDOS, TAMANHO_NAVIO);
+    printf("Orientacoes validas:\n");
+    printf("  H: Horizontal\n");
+    printf("  V: Vertical\n");
+    printf("  D1: Diagonal Aumento (linha e coluna aumentam)\n");
+    printf("  D2: Diagonal Diminuicao (linha aumenta, coluna diminui)\n");
+    printf("------------------------------------------------------\n");
+
+    int navios_posicionados = 0;
+    Navio novo_navio;
+    char orientacao_input[3];
+
+    while (navios_posicionados < NUM_NAVIOS_REQUERIDOS) {
+        printf("\n--- Navio %d de %d ---\n", navios_posicionados + 1, NUM_NAVIOS_REQUERIDOS);
+        
+        printf("Entre com a Linha Inicial (0-9): ");
+        if (scanf("%d", &novo_navio.linha_inicial) != 1) {
+            printf("\nEntrada Invalida. Por favor, entre apenas com um numero.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+
+        printf("Entre com a Coluna Inicial (0-9): ");
+        if (scanf("%d", &novo_navio.coluna_inicial) != 1) {
+            printf("\nEntrada Invalida. Por favor, entre apenas com um numero.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+
+        printf("Entre com a Orientacao (H, V, D1, D2): ");
+        if (scanf("%2s", orientacao_input) != 1) {
+            printf("\nEntrada Invalida. Digite H, V, D1 ou D2.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+        
+        orientacao_input[0] = toupper(orientacao_input[0]);
+        if (orientacao_input[1] != '\0') {
+            if (orientacao_input[0] == 'D' && (orientacao_input[1] == '1' || orientacao_input[1] == '2')) {
+                novo_navio.orientacao = orientacao_input[1] == '1' ? 'D1' : 'D2';
+            } else {
+                printf("\nOrientacao Invalida. Use H, V, D1 ou D2.\n");
+                while (getchar() != '\n');
+                continue;
+            }
+        } else {
+            if (orientacao_input[0] == 'H' || orientacao_input[0] == 'V') {
+                novo_navio.orientacao = orientacao_input[0];
+            } else {
+                printf("\nOrientacao Invalida. Use H, V, D1 ou D2.\n");
+                while (getchar() != '\n');
+                continue;
+            }
+        }
+        
+        if (posicionar_navio(novo_navio)) {
+            navios_posicionados++;
+            printf("\nSUCESSO! Navio %d posicionado. Restam %d.\n", 
+                   navios_posicionados, NUM_NAVIOS_REQUERIDOS - navios_posicionados);
+            
+            exibir_tabuleiro();
+            
+        } else {
+            printf("\n\nTente novamente com novas coordenadas.\n");
+        }
+        
+        while (getchar() != '\n');
+    }
+
+    printf("\nTODOS OS %d NAVIOS FORAM POSICIONADOS!\n", NUM_NAVIOS_REQUERIDOS);
+    
+    printf("\nPressione ENTER para sair...");
+    fflush(stdin); 
+    getchar(); 
+    
+    return 0;
+}
