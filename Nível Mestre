@@ -1,0 +1,260 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// --- Definicoes de Configuracao ---
+#define TAB_TAM 10      // Tamanho do Tabuleiro (NxN)
+#define HAB_TAM 5       // Dimensao da Matriz de Habilidade (deve ser impar)
+
+// Codigos de Estado do Tabuleiro
+#define AGUA 0
+#define NAVIO 3
+#define HABILIDADE 5    // Posicao afetada pela habilidade
+
+// --- Funcoes de Controle ---
+
+/**
+ * @brief Pausa a execucao e espera que o usuario pressione ENTER.
+ * Garante a limpeza do buffer de entrada (stdin).
+ * @param mensagem Mensagem a ser exibida.
+ */
+void esperar_enter(const char *mensagem) {
+    int c;
+    printf("\n\n%s", mensagem);
+    fflush(stdout); 
+    while ((c = getchar()) != '\n' && c != EOF) { }
+}
+
+// --- Funcoes de Manipulacao de Tabuleiro ---
+
+/**
+ * @brief Inicializa o tabuleiro com agua e posiciona navios para demonstracao.
+ * @param tabuleiro Matriz 10x10.
+ */
+void inicializar_tabuleiro(int tabuleiro[TAB_TAM][TAB_TAM]) {
+    int i, j;
+    for (i = 0; i < TAB_TAM; i++) {
+        for (j = 0; j < TAB_TAM; j++) {
+            tabuleiro[i][j] = AGUA;
+        }
+    }
+    // Posicionamento estatico de navios
+    tabuleiro[2][2] = NAVIO;
+    tabuleiro[2][3] = NAVIO;
+    tabuleiro[2][4] = NAVIO;
+    tabuleiro[5][7] = NAVIO;
+    tabuleiro[6][7] = NAVIO;
+    tabuleiro[7][7] = NAVIO;
+}
+
+/**
+ * @brief Exibe o estado atual do tabuleiro no console.
+ * Utiliza caracteres distintos para Agua (.), Navio (N) e Habilidade (X).
+ * @param tabuleiro Matriz 10x10.
+ */
+void exibir_tabuleiro(int tabuleiro[TAB_TAM][TAB_TAM]) {
+    int i, j;
+    printf("   ");
+    for (j = 0; j < TAB_TAM; j++) {
+        printf(" %d", j);
+    }
+    printf("\n  +");
+    for (j = 0; j < TAB_TAM; j++) {
+        printf("--");
+    }
+    printf("-\n");
+
+    for (i = 0; i < TAB_TAM; i++) {
+        printf("%d |", i);
+        for (j = 0; j < TAB_TAM; j++) {
+            if (tabuleiro[i][j] == HABILIDADE) {
+                printf(" X");
+            } else if (tabuleiro[i][j] == NAVIO) {
+                printf(" N");
+            } else {
+                printf(" .");
+            }
+        }
+        printf("\n");
+    }
+}
+
+// --- Funcoes de Criacao de Habilidade (Area de Efeito) ---
+
+/**
+ * @brief Define a area de efeito em forma de Cone (expansao vertical).
+ * A largura em cada linha 'i' é calculada pelo deslocamento em relacao ao centro.
+ * @param matriz Matriz HAB_TAM x HAB_TAM para armazenar o Cone (1=afetado, 0=nao afetado).
+ */
+void criar_cone(int matriz[HAB_TAM][HAB_TAM]) {
+    int i, j;
+    int centro = HAB_TAM / 2;
+
+    printf("\nCriando Matriz de Habilidade: Cone (Topo para Baixo)\n");
+    for (i = 0; i < HAB_TAM; i++) {
+        int alcance = i;
+        for (j = 0; j < HAB_TAM; j++) {
+            // Lógica: 1 se a coluna j estiver dentro do alcance [centro - alcance, centro + alcance]
+            if (j >= centro - alcance && j <= centro + alcance) {
+                matriz[i][j] = 1; 
+            } else {
+                matriz[i][j] = 0;
+            }
+            printf("%d ", matriz[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+/**
+ * @brief Define a area de efeito em forma de Cruz (linha e coluna centrais).
+ * @param matriz Matriz HAB_TAM x HAB_TAM para armazenar a Cruz.
+ */
+void criar_cruz(int matriz[HAB_TAM][HAB_TAM]) {
+    int i, j;
+    int centro = HAB_TAM / 2;
+
+    printf("\nCriando Matriz de Habilidade: Cruz (Linha e Coluna Centrais)\n");
+    for (i = 0; i < HAB_TAM; i++) {
+        for (j = 0; j < HAB_TAM; j++) {
+            // Lógica: 1 se estiver na linha central OU na coluna central
+            if (i == centro || j == centro) {
+                matriz[i][j] = 1; 
+            } else {
+                matriz[i][j] = 0;
+            }
+            printf("%d ", matriz[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+/**
+ * @brief Define a area de efeito em forma de Octaedro (Losango na visao frontal).
+ * Baseia-se na Distancia de Manhattan (distancia do taxi) em relacao ao centro.
+ * @param matriz Matriz HAB_TAM x HAB_TAM para armazenar o Losango.
+ */
+void criar_octaedro(int matriz[HAB_TAM][HAB_TAM]) {
+    int i, j;
+    int centro = HAB_TAM / 2;
+    int raio = centro; // Distancia maxima de Manhattan permitida
+
+    printf("\nCriando Matriz de Habilidade: Octaedro (Losango)\n");
+    for (i = 0; i < HAB_TAM; i++) {
+        for (j = 0; j < HAB_TAM; j++) {
+            // Calculo da Distancia de Manhattan: |i - centro| + |j - centro|
+            int dist = abs(i - centro) + abs(j - centro);
+
+            // Lógica: 1 se a distancia for menor ou igual ao raio
+            if (dist <= raio) {
+                matriz[i][j] = 1; 
+            } else {
+                matriz[i][j] = 0; 
+            }
+            printf("%d ", matriz[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+// --- Funcao de Sobreposicao ---
+
+/**
+ * @brief Sobrepõe a matriz de habilidade no tabuleiro principal.
+ * Garante que a area de efeito fique centrada na origem e dentro dos limites.
+ * @param tabuleiro Tabuleiro principal.
+ * @param hab_matriz Matriz de efeito (5x5).
+ * @param origem_i Linha de origem/centro no tabuleiro.
+ * @param origem_j Coluna de origem/centro no tabuleiro.
+ */
+void sobrepor_habilidade(int tabuleiro[TAB_TAM][TAB_TAM], int hab_matriz[HAB_TAM][HAB_TAM], int origem_i, int origem_j) {
+    int i, j;
+    int centro = HAB_TAM / 2;
+
+    for (i = 0; i < HAB_TAM; i++) {
+        for (j = 0; j < HAB_TAM; j++) {
+            if (hab_matriz[i][j] == 1) {
+                // Coordenadas reais no tabuleiro: Deslocamento + Origem
+                int tab_i = origem_i + (i - centro);
+                int tab_j = origem_j + (j - centro);
+
+                // Validacao de limites do tabuleiro
+                if (tab_i >= 0 && tab_i < TAB_TAM && tab_j >= 0 && tab_j < TAB_TAM) {
+                    tabuleiro[tab_i][tab_j] = HABILIDADE;
+                }
+            }
+        }
+    }
+}
+
+// --- Funcao Principal ---
+
+int main() {
+    int tabuleiro[TAB_TAM][TAB_TAM];
+    int hab_matriz[HAB_TAM][HAB_TAM];
+    int origem_i, origem_j;
+
+    printf("--- Nivel Mestre: Habilidades Especiais (Area de Efeito) ---\n");
+    
+    esperar_enter("Pressione ENTER para comecar a demonstracao...");
+    
+    // ************************************************************
+    // *** 1. Habilidade Cone ***
+    // ************************************************************
+    
+    inicializar_tabuleiro(tabuleiro);
+    printf("\n## 1. Demonstracao da Habilidade: Cone\n");
+
+    origem_i = 4;
+    origem_j = 5;
+
+    criar_cone(hab_matriz);
+
+    sobrepor_habilidade(tabuleiro, hab_matriz, origem_i, origem_j);
+
+    printf("\nTabuleiro 10x10 com Habilidade Cone (Origem: %d, %d)\n", origem_i, origem_j);
+    exibir_tabuleiro(tabuleiro);
+
+    esperar_enter("Pressione ENTER para ver a proxima habilidade: CRUZ...");
+
+    // ************************************************************
+    // *** 2. Habilidade Cruz ***
+    // ************************************************************
+    
+    inicializar_tabuleiro(tabuleiro);
+    printf("\n## 2. Demonstracao da Habilidade: Cruz\n");
+
+    origem_i = 7;
+    origem_j = 3;
+
+    criar_cruz(hab_matriz);
+
+    sobrepor_habilidade(tabuleiro, hab_matriz, origem_i, origem_j);
+
+    printf("\nTabuleiro 10x10 com Habilidade Cruz (Origem: %d, %d)\n", origem_i, origem_j);
+    exibir_tabuleiro(tabuleiro);
+
+    esperar_enter("Pressione ENTER para ver a proxima habilidade: OCTAEDRO (LOSANGO)...");
+
+    // ************************************************************
+    // *** 3. Habilidade Octaedro (Losango) ***
+    // ************************************************************
+    
+    inicializar_tabuleiro(tabuleiro);
+    printf("\n## 3. Demonstracao da Habilidade: Octaedro (Losango)\n");
+
+    origem_i = 1;
+    origem_j = 7;
+
+    criar_octaedro(hab_matriz);
+
+    sobrepor_habilidade(tabuleiro, hab_matriz, origem_i, origem_j);
+
+    printf("\nTabuleiro 10x10 com Habilidade Octaedro (Losango) (Origem: %d, %d)\n", origem_i, origem_j);
+    exibir_tabuleiro(tabuleiro);
+
+    printf("\n--- Desafio Mestre Concluido! ---\n");
+    
+    esperar_enter("Pressione ENTER para fechar a janela.");
+    
+    return 0;
+}
